@@ -17,6 +17,9 @@ from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
 import os
+import dash
+import dash_bootstrap_components as dbc
+from dash import Input, Output, dcc, html
 #%%
 """ Importing Data """
 path_to_all_data = r"C:\Users\caspe\OneDrive - TU Eindhoven\DS&AI 2022-2023\Q3\2AMV10 - Visual Analytics\2. Terrorists at CGCS\data\data"
@@ -53,36 +56,52 @@ text_dict = data_import[1]
 
 
 #%%
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
+app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content'),     
-])
-
-
-CONTENT_STYLE = {
-    'margin-left': '25%',
-    'margin-right': '5%',
-    'top': 0,
-    'padding': '20px 10px'
+# the style arguments for the sidebar. We use position:fixed and a fixed width
+SIDEBAR_STYLE = {
+    "position": "fixed",
+    "top": 0,
+    "left": 0,
+    "bottom": 0,
+    "width": "20rem",
+    "padding": "2rem 1rem",
+    "background-color": "#f8f9fa",
 }
 
-# # Side bar page 1
+# the styles for the main content position it to the right of the sidebar and
+# add some padding.
+CONTENT_STYLE = {
+    "margin-left": "18rem",
+    "margin-right": "2rem",
+    "padding": "2rem 1rem",
+}
+
+sidebar = html.Div(
+    [
+        html.H2("Conent", className="display-4"),
+        html.Hr(),
+ 
+        dbc.Nav(
+            [
+                dbc.NavLink("Homepage: Prediction", href="/page-1", active="exact"),
+                dbc.NavLink("Page 2: Profile Overview", href="/page-2", active="exact"),
+                dbc.NavLink("Page 3: Textual Analysis", href="/page-3", active="exact"),
+                dbc.NavLink("Page 4: Image Classification", href="/page-4", active="exact")
+            ],
+            vertical=True,
+            pills=True,
+        ),
+    ],
+    style=SIDEBAR_STYLE,
+)
+
+
 TEXT_STYLE = {
     'textAlign': 'center',
     'color': '#191970'
 }
 
-SIDEBAR_STYLE = {
-    'position': 'fixed',
-    'top': 0,
-    'left': 0,
-    'bottom': 0,
-    'width': '20%',
-    'padding': '20px 10px',
-    'background-color': '#f8f9fa'
-}
 
 #Tittle + index reference
 Content_header1 = dbc.Row(html.Div([
@@ -109,20 +128,23 @@ index_page = html.Div([
 ])
 
                                                        
-    
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content'),     
+])
 ################################## Page 1 ############################
 
 page_1_layout = html.Div([
     html.Div(id='page-1-content'),
     Content_header1,
     html.Br(),
-    index_page,
+    sidebar,
     html.Br(),
     # Side_bar_layout1,
     # Graph_layout,
     
                     
-], style=CONTENT_STYLE
+]
 )
 
 ##################################  Page 2    ################################## 
@@ -130,7 +152,7 @@ page_2_layout = html.Div([
     html.Div(id='page-2-content'),
     Content_header2,
     html.Br(),
-    index_page,
+    sidebar,
     # Side_bar_layout2,
     # stan_graphhhh
 ])
@@ -139,7 +161,7 @@ page_3_layout = html.Div([
     html.Div(id='page-3-content'),
     Content_header3,
     html.Br(),
-    index_page,
+    sidebar,
 
 ])            
        
@@ -149,26 +171,30 @@ page_4_layout = html.Div([
     html.Div(id='page-4-content'),
     Content_header4,
     html.Br(),
-    index_page,
+    sidebar
     
 ])         
                      
 ################################### Callbacks Home-page ##################################
-@app.callback(dash.dependencies.Output('page-content', 'children'),
-              [dash.dependencies.Input('url', 'pathname')])
-
-def display_page(pathname):
-    if pathname == '/page-1':
-        return page_1_layout
-    elif pathname == '/page-2':
-        return page_2_layout
-    elif pathname == '/page-3':
-        return page_3_layout
-    
-    elif pathname == '/page-4':
-        return page_4_layout
-    else:
-        return page_1_layout
+@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
+def render_page_content(pathname):
+    if pathname == "/page-1":
+        return html.P(page_1_layout)
+    elif pathname == "/page-2":
+        return html.P(page_2_layout)
+    elif pathname == "/page-3":
+        return html.P(page_3_layout)
+    elif pathname == "/page-4":
+        return html.P(page_4_layout)
+    # If the user tries to reach a different page, return a 404 message
+    return html.Div(
+        [
+            html.H1("404: Not found", className="text-danger"),
+            html.Hr(),
+            html.P(f"The pathname {pathname} was not recognised..."),
+        ],
+        className="p-3 bg-light rounded-3",
+    )
     
                      
 ################################### Callbacks page 1 ##################################
