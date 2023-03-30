@@ -202,21 +202,48 @@ page_1_layout = html.Div([
 )
 
 ##################################  Page 2    ################################## 
-df = all_data_frames['Person7']
-table  = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id = 'overview') 
-alert = dbc.Container(id='tbl_out')
+dropdown1 = html.Div([
+    dcc.Dropdown( options=sorted(list(all_data_frames.keys())),id='demo-dropdown1'),
+    html.Div(id='dd-output-container1')
+])
+table1  = html.Div(id='table1')
+alert1 = dbc.Container(id='tbl_out1')
+
+dropdown2 = html.Div([
+    dcc.Dropdown( options=sorted(list(all_data_frames.keys())),id='demo-dropdown2'),
+    html.Div(id='dd-output-container2')
+])
+table2  = html.Div(id='table2')
+alert2 = dbc.Container(id='tbl_out2')
+
 
 page_2_layout = html.Div([
     html.Div(id='page-2-content'),
     Content_header2,
     html.Br(),
     sidebar,
-    dbc.Container([table
+    dbc.Container([dbc.Row([
+            #Boxplot
+            dbc.Col([dropdown1,
+                     table1,
+                     alert1
+
+                    ]), 
+            
+            dbc.Col([dropdown2,
+                     table2,
+                     alert2
+
+                    ]),
+                ]),
         
-        ]),
-    dbc.Container([alert,
-                   
-                   ])
+        ]
+        
+        
+        )
+    
+
+                                
 
 ])
 
@@ -241,6 +268,7 @@ page_4_layout = html.Div([
     sidebar
     
 ])         
+
                      
 ################################### Callbacks Home-page ##################################
 @app.callback(dash.dependencies.Output("page-content", "children"), [dash.dependencies.Input("url", "pathname")])
@@ -270,26 +298,72 @@ def render_page_content(pathname):
 
 
 ################################### Callbacks page 2 ##################################
-import base64
-@callback(Output('tbl_out', 'children'), 
-          [Input('overview', 'active_cell'),Input('overview', 'data')])
-def update_graphs(value,data):
-    
-    row = value['row']
-    column = value['row']
-    col_id = value['column_id']
-    iets = data[row][col_id]
-    
 
-    
-    caption = iets[:-4] + 'caption.txt'
-    if caption in all_captions.keys():
-        text = all_captions[caption]
+################################### User y ###################################
+@callback(Output('tbl_out1', 'children'), 
+          [Input('table1', 'active_cell'),Input('table1', 'data')])
+def update_graphs(value,data):
+    if value and data:
+        row = value['row']
+        col_id = value['column_id']
+        iets = data[row][col_id]
+        
+        caption = iets[:-4] + 'caption.txt'
+        if caption in all_captions.keys():
+            text = all_captions[caption]
+        else:
+            text = 'No caption was supplied'
+        fig = px.imshow(np.array(all_pictures[iets]), title  = "Caption:" + text)
     else:
-        text = 'No caption was supplied'
-    fig = px.imshow(np.array(all_pictures[iets]), title  = "Caption:" + text)
-    
+        raise PreventUpdate
+        
     return  dcc.Graph(figure=fig) if value else "Click the table"
+
+@app.callback(
+    Output('dd-output-container1', 'children'),Output('table1', 'children'),
+    Input('demo-dropdown1', 'value')
+)
+def update_output(value):
+    if value:
+        df = all_data_frames[value]
+        q = dash_table.DataTable(df.to_dict('records'),[{"name": i, "id": i} for i in df.columns], id='table1')
+    else:
+        raise PreventUpdate
+        
+    return f'You have selected {value}', q
+
+################################### User x ###################################
+@callback(Output('tbl_out2', 'children'), 
+          [Input('table2', 'active_cell'),Input('table2', 'data')])
+def update_graphs2(value,data):
+    if value and data:
+        row = value['row']
+        col_id = value['column_id']
+        iets = data[row][col_id]
+        
+        caption = iets[:-4] + 'caption.txt'
+        if caption in all_captions.keys():
+            text = all_captions[caption]
+        else:
+            text = 'No caption was supplied'
+        fig = px.imshow(np.array(all_pictures[iets]), title  = "Caption:" + text)
+    else:
+        raise PreventUpdate
+        
+    return  dcc.Graph(figure=fig) if value else "Click the table"
+
+@app.callback(
+    Output('dd-output-container2', 'children'),Output('table2', 'children'),
+    Input('demo-dropdown2', 'value')
+)
+def update_output2(value):
+    if value:
+        df = all_data_frames[value]
+        q = dash_table.DataTable(df.to_dict('records'),[{"name": i, "id": i} for i in df.columns], id='table2')
+    else:
+        raise PreventUpdate
+        
+    return f'You have selected {value}', q
 
 
 
