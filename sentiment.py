@@ -6,6 +6,17 @@ import re
 # Load the CSV dataset into a Pandas DataFrame
 df = pd.read_csv('train.csv')
 
+# Filter only relevant df for the NLP
+df.drop('id', inplace=True, axis=1)
+df.drop('retweet_count', inplace=True, axis=1)
+df.drop('favorite_count', inplace=True, axis=1)
+df.drop('device', inplace=True, axis=1)
+df.drop('retweeted_status_id', inplace=True, axis=1)
+df.drop('latitude', inplace=True, axis=1)
+df.drop('longitude', inplace=True, axis=1)
+df.drop('state', inplace=True, axis=1)
+df.drop('inserted_at', inplace=True, axis=1)
+df.drop('tw_user_id', inplace=True, axis=1)
 
 # Define a function to analyze the sentiment of a tweet
 def analyze_sentiment(tweet):
@@ -37,7 +48,8 @@ def analyze_tone(tweet):
 
 # Define a function to count threatening words in a tweet
 def count_negative_threatening_words(tweet):
-    pattern = re.compile(r"\b(attack|bomb|gun|kill|murder|terror|hate|scarely|seldom|barely|never|nobody|nothing|nowhere)\b", re.IGNORECASE)
+    pattern = re.compile(r"\b(attack|bomb|gun|kill|murder|terror|hate|scarely|seldom|barely|never|nobody|nothing"
+                         r"|nowhere)\b", re.IGNORECASE)
     matches = pattern.findall(tweet)
     return len(matches)
 
