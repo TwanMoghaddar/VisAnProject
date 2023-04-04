@@ -9,7 +9,7 @@ import dash_bootstrap_components as dbc
 import os
 
 """ Importing Data """
-path_to_all_data = r"C:\Users\caspe\OneDrive - TU Eindhoven\DS&AI 2022-2023\Q3\2AMV10 - Visual Analytics\2. Terrorists at CGCS\data\data"
+path_to_all_data = r"C:\Users\20190896\Downloads\VA\2. Terrorists at CGCS\data\data"
 
 
 from PIL import Image
@@ -18,7 +18,7 @@ def picture_import(path):
     person_images = { }
     
     for subdir, dirs, files in os.walk(path_to_all_data):
-        person = subdir[116:] #This is different for everyone as folders are named differently!!
+        person = subdir[0:] #This is different for everyone as folders are named differently!!
         person_images[person] = []
         for file in files:
             im_path = os.path.join(subdir, file)
