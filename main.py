@@ -14,8 +14,8 @@ Created on Fri Jan 14 20:44:17 2022
 """Importing Libraries
 """
 
-import dash                     #(version 1.0.0)
-from dash import dcc, html, dash_table, Input, Output,  callback
+import dash  # (version 1.0.0)
+from dash import dcc, html, dash_table, Input, Output, callback
 import dash_bootstrap_components as dbc
 import os
 from sklearn.preprocessing import normalize
@@ -30,22 +30,25 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from collections import Counter
 import networkx as nx
-
+import dash_table
+import sentiment as st
 
 """ Importing Data 
 """
 path_to_all_data = r"C:\Users\caspe\OneDrive - TU Eindhoven\DS&AI 2022-2023\Q3\2AMV10 - Visual Analytics\2. Terrorists at CGCS\data\data"
 
 predictions_df = pd.read_csv(r"C:\Users\caspe\Documents\GitHub\VisAnProject\predictions.csv")
-#%%
-#importing the Image class from PIL package
+
+
+# %%
+# importing the Image class from PIL package
 def picture_import(path):
     person_images = {}
     person_text = {}
     all_pictures = {}
     all_captions = {}
     for subdir, dirs, files in os.walk(path_to_all_data):
-        person = subdir[116:] #This is different for everyone as folders are named differently!!
+        person = subdir[116:]  # This is different for everyone as folders are named differently!!
         person_images[person] = []
         person_text[person] = []
 
@@ -54,19 +57,19 @@ def picture_import(path):
             im_path = os.path.join(subdir, file)
             str_im_path = str(im_path)
             if str_im_path[-1] == 'g':
-                
-                #read the image, creating an object
+                # read the image, creating an object
                 im = Image.open(im_path)
-                person_images[person].append((file,im))
-                
+                person_images[person].append((file, im))
+
                 all_pictures[file] = im
             if str_im_path[-1] == 't':
                 with open(str_im_path, 'r') as file:
                     data = file.read().replace('\n', '')
                     person_text[person].append((z, data))
                     all_captions[z] = data
-                    
+
     return person_images, person_text, all_pictures, all_captions
+
 
 """Setting up data dictionaries
 """
@@ -74,40 +77,40 @@ data_import = picture_import(path_to_all_data)
 picture_dict = data_import[0]
 text_dict = data_import[1]
 all_pictures = data_import[2]
-all_captions =  data_import[3]
+all_captions = data_import[3]
 
 """Making dataframe for every person
 """
 persons = picture_dict.keys()
 all_data_frames = {}
 for i in persons:
-    person_frame = pd.DataFrame(columns = ['Time' , 'Text', 'Picture'] )
+    person_frame = pd.DataFrame(columns=['Time', 'Text', 'Picture'])
     time = 0
     index = 0
     for pic_tup in picture_dict[i]:
         placed = False
         if text_dict[i]:
-            
+
             for text_tup in text_dict[i]:
                 if pic_tup[0][:-4] == text_tup[0][:-11]:
-                    person_frame.loc[index] = [time, text_tup[1],pic_tup[0]]
+                    person_frame.loc[index] = [time, text_tup[1], pic_tup[0]]
                     time += 1
                     index += 1
                     placed = True
                     break
         elif not placed:
-            person_frame.loc[index] = [time, 0,pic_tup[0]]
+            person_frame.loc[index] = [time, 0, pic_tup[0]]
             time += 1
             index += 1
         else:
-            person_frame.loc[index] = [time, 0,pic_tup[0]]
+            person_frame.loc[index] = [time, 0, pic_tup[0]]
             time += 1
             index += 1
-            
-    all_data_frames[i]=person_frame
+
+    all_data_frames[i] = person_frame
 
 
-def sim_matrix(predictions_df): #text_analysis_dictionary
+def sim_matrix(predictions_df):  # text_analysis_dictionary
     """ Calculates the similarity between persons by building a matrix where columns represent various 
     features from the analysis and rows correspond to users. First n columns represent counts of how often 
     a particular item was recognized for a specific person in all their tweets using CNN Exception. The last 
@@ -136,16 +139,16 @@ def sim_matrix(predictions_df): #text_analysis_dictionary
         
         Smaller distances indicate a bigger similarity.
     """
-    
-    predictions_df_rank1 = predictions_df[predictions_df['rank']>= 1]
+
+    predictions_df_rank1 = predictions_df[predictions_df['rank'] >= 1]
 
     alll = Counter(predictions_df_rank1['class_label'])
-    allowed_classes = [k for k,v in alll.items() if v >= 10]
-    
+    allowed_classes = [k for k, v in alll.items() if v >= 10]
+
     predictions_df_rank2 = predictions_df_rank1[predictions_df_rank1['class_label'].isin(allowed_classes)]
-    
+
     all_instances = np.unique(predictions_df_rank2['class_label'])
-    
+
     dictt = {}
     for i in all_instances:
         dictt[i] = 0
@@ -154,9 +157,9 @@ def sim_matrix(predictions_df): #text_analysis_dictionary
     al_dicts = []
     matrix = []
     for i in persons:
-        predictions_df_rank1_person = predictions_df_rank2[predictions_df_rank2['person_id']==i]
+        predictions_df_rank1_person = predictions_df_rank2[predictions_df_rank2['person_id'] == i]
         count_dict = Counter(predictions_df_rank1_person['class_label'])
-        
+
         for q in all_instances:
             if q not in count_dict.keys():
                 count_dict[q] = 0
@@ -165,23 +168,22 @@ def sim_matrix(predictions_df): #text_analysis_dictionary
         count_dict['Stiffness'] = float(np.random.uniform(-100, 100, 1))
         count_dict['Polarity'] = float(np.random.uniform(-100, 100, 1))
         al_dicts.append(count_dict)
-        
+
         matrix.append(list(count_dict.values()))
 
     X = np.array([np.array(xi) for xi in matrix])
 
-    
     np.set_printoptions(threshold=sys.maxsize)
-    
+
     X = normalize(X, axis=0, norm='l2')
-    
+
     distance_matrix = pairwise_distances(X, metric='l1')
-    
-    
+
     return distance_matrix
 
 
-sim_matrixx = np.round(sim_matrix(predictions_df),3)
+sim_matrixx = np.round(sim_matrix(predictions_df), 3)
+
 
 def style_row_by_top_values(df, nlargest=15):
     numeric_columns = df.drop(['User'], axis=1).columns
@@ -199,6 +201,7 @@ def style_row_by_top_values(df, nlargest=15):
             })
     return styles
 
+
 def plot_network_graph(edge_list):
     """ Gets a list of edges to be constructed, constructs a graphical represention of network using 
     Networkx and then visualizes it using  plotly.graph_objects
@@ -211,24 +214,21 @@ def plot_network_graph(edge_list):
     Returns:
        a Go.Figure object that can be visualized in Dash
     """
-    
-    
-    
-    
+
     plt.figure(num=None, figsize=(10, 10), dpi=80)
     plt.axis('off')
     fig = plt.figure(1)
     weights = []
-    
+
     G = nx.Graph()
     for edge in edge_list:
-        if edge[2] >0:
+        if edge[2] > 0:
             weights.append(str(edge[2]))
-            
+
             G.add_edge(edge[0], edge[1], weight=edge[2])
-    
+
     pos = nx.spring_layout(G)  # positions for all nodes - seed for reproducibility
-    
+
     # edges trace
     edge_x = []
     edge_y = []
@@ -243,27 +243,27 @@ def plot_network_graph(edge_list):
         edge_y.append(y0)
         edge_y.append(y1)
         edge_y.append(None)
-        position_anno_x.append((x1 + x0)/2)
-        position_anno_y.append((y1 + y0)/2)
+        position_anno_x.append((x1 + x0) / 2)
+        position_anno_y.append((y1 + y0) / 2)
 
     edge_trace = go.Scatter(
         x=edge_x, y=edge_y,
         line=dict(color='black', width=1),
-        
+
         showlegend=False,
-        mode='lines + text', 
-        text=weights, 
+        mode='lines + text',
+        text=weights,
         textposition='bottom center')
-    
+
     anno_trace = go.Scatter(
         x=position_anno_x, y=position_anno_y,
-        
+
         hoverinfo='none',
         showlegend=False,
-        mode='markers + text', 
-        text=weights, 
+        mode='markers + text',
+        text=weights,
         textposition='bottom center')
-    
+
     # nodes trace
     node_x = []
     node_y = []
@@ -273,7 +273,7 @@ def plot_network_graph(edge_list):
         node_x.append(x)
         node_y.append(y)
         text.append(node)
-        
+
     node_trace = go.Scatter(
         x=node_x, y=node_y, text=text,
         mode='markers+text',
@@ -299,12 +299,11 @@ def plot_network_graph(edge_list):
 
     # figure
     fig = go.Figure(data=[edge_trace, node_trace, anno_trace], layout=layout)
-    
-    return fig       
+
+    return fig
 
 
-
-#%%
+# %%
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
 """ Layout specifications for the app
@@ -331,7 +330,7 @@ sidebar = html.Div(
     [
         html.H2("Content", className="display-4"),
         html.Hr(),
- 
+
         dbc.Nav(
             [
                 dbc.NavLink("Homepage: Prediction", href="/page-1", active="exact"),
@@ -346,23 +345,20 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-
 TEXT_STYLE = {
     'textAlign': 'center',
     'color': '#191970'
 }
 
-
-#Tittle + index reference
+# Tittle + index reference
 Content_header1 = dbc.Row(html.Div([
-    html.H1('Homepage: Prediction')], style = TEXT_STYLE))
+    html.H1('Homepage: Prediction')], style=TEXT_STYLE))
 Content_header2 = dbc.Row(html.Div([
-    html.H1('Page 2: Profile Overview')], style = TEXT_STYLE))
+    html.H1('Page 2: Profile Overview')], style=TEXT_STYLE))
 Content_header3 = dbc.Row(html.Div([
-    html.H1('Page 3: Text Analysis')], style = TEXT_STYLE))
+    html.H1('Page 3: Text Analysis')], style=TEXT_STYLE))
 Content_header4 = dbc.Row(html.Div([
-    html.H1('Page 4: Image Classifications')], style = TEXT_STYLE))
-
+    html.H1('Page 4: Image Classifications')], style=TEXT_STYLE))
 
 # Page Navigation
 index_page = html.Div([
@@ -373,314 +369,352 @@ index_page = html.Div([
     dcc.Link('Textual Analysis', href='/page-3'),
     html.Br(),
     dcc.Link('Image classification', href='/page-4')
-    
+
 ])
 
-                                                       
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content'),     
+    html.Div(id='page-content'),
 ])
 """################################## Page 1: Predicting group ############################
 """
 dropdown_network = html.Div([
-    dcc.Dropdown( options=sorted(list(all_data_frames.keys())),searchable=True,  multi=True,id='drop_down_network'),
-    html.Button('Confirm input',id="Confirm_net", n_clicks=0,  )
-    
+    dcc.Dropdown(options=sorted(list(all_data_frames.keys())), searchable=True, multi=True, id='drop_down_network'),
+    html.Button('Confirm input', id="Confirm_net", n_clicks=0, )
+
 ])
 
-
-df_sim_matrixx = pd.DataFrame(sim_matrixx, columns = list(picture_dict.keys())[1:] )
+df_sim_matrixx = pd.DataFrame(sim_matrixx, columns=list(picture_dict.keys())[1:])
 df_sim_matrixx.insert(0, 'User', list(picture_dict.keys())[1:])
-dash_sim_matrix = dash_table.DataTable(df_sim_matrixx.to_dict('records'), 
-                                       [{"name": i, "id": i} for i in df_sim_matrixx.columns], 
-                                        fixed_columns={'headers': True, 'data': 1},
-                                        
-                                        style_data_conditional=[
-                                                                {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person1}} < {}'.format(np.mean(df_sim_matrixx['Person1'])),
-                                                                        'column_id': 'Person1'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person2}} < {}'.format(np.mean(df_sim_matrixx['Person2'])),
-                                                                        'column_id': 'Person2'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person3}} < {}'.format(np.mean(df_sim_matrixx['Person3'])),
-                                                                        'column_id': 'Person3'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person4}} < {}'.format(np.mean(df_sim_matrixx['Person4'])),
-                                                                        'column_id': 'Person4'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person5}} < {}'.format(np.mean(df_sim_matrixx['Person5'])),
-                                                                        'column_id': 'Person5'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person6}} < {}'.format(np.mean(df_sim_matrixx['Person6'])),
-                                                                        'column_id': 'Person6'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person7}} < {}'.format(np.mean(df_sim_matrixx['Person7'])),
-                                                                        'column_id': 'Person7'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person8}} < {}'.format(np.mean(df_sim_matrixx['Person8'])),
-                                                                        'column_id': 'Person8'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person9}} < {}'.format(np.mean(df_sim_matrixx['Person9'])),
-                                                                        'column_id': 'Person9'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person10}} < {}'.format(np.mean(df_sim_matrixx['Person10'])),
-                                                                        'column_id': 'Person10'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person11}} < {}'.format(np.mean(df_sim_matrixx['Person11'])),
-                                                                        'column_id': 'Person11'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person12}} < {}'.format(np.mean(df_sim_matrixx['Person12'])),
-                                                                        'column_id': 'Person12'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person13}} < {}'.format(np.mean(df_sim_matrixx['Person13'])),
-                                                                        'column_id': 'Person13'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person14}} < {}'.format(np.mean(df_sim_matrixx['Person14'])),
-                                                                        'column_id': 'Person14'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person15}} < {}'.format(np.mean(df_sim_matrixx['Person15'])),
-                                                                        'column_id': 'Person15'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person16}} < {}'.format(np.mean(df_sim_matrixx['Person16'])),
-                                                                        'column_id': 'Person16'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person17}} < {}'.format(np.mean(df_sim_matrixx['Person17'])),
-                                                                        'column_id': 'Person17'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person18}} < {}'.format(np.mean(df_sim_matrixx['Person18'])),
-                                                                        'column_id': 'Person18'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person19}} < {}'.format(np.mean(df_sim_matrixx['Person19'])),
-                                                                        'column_id': 'Person19'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person20}} < {}'.format(np.mean(df_sim_matrixx['Person20'])),
-                                                                        'column_id': 'Person20'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person21}} < {}'.format(np.mean(df_sim_matrixx['Person21'])),
-                                                                        'column_id': 'Person21'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person22}} < {}'.format(np.mean(df_sim_matrixx['Person22'])),
-                                                                        'column_id': 'Person22'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person23}} < {}'.format(np.mean(df_sim_matrixx['Person23'])),
-                                                                        'column_id': 'Person23'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person24}} < {}'.format(np.mean(df_sim_matrixx['Person24'])),
-                                                                        'column_id': 'Person24'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person25}} < {}'.format(np.mean(df_sim_matrixx['Person25'])),
-                                                                        'column_id': 'Person25'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person26}} < {}'.format(np.mean(df_sim_matrixx['Person26'])),
-                                                                        'column_id': 'Person26'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person27}} < {}'.format(np.mean(df_sim_matrixx['Person27'])),
-                                                                        'column_id': 'Person27'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person28}} < {}'.format(np.mean(df_sim_matrixx['Person28'])),
-                                                                        'column_id': 'Person28'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person29}} < {}'.format(np.mean(df_sim_matrixx['Person29'])),
-                                                                        'column_id': 'Person29'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person30}} < {}'.format(np.mean(df_sim_matrixx['Person30'])),
-                                                                        'column_id': 'Person30'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person31}} < {}'.format(np.mean(df_sim_matrixx['Person31'])),
-                                                                        'column_id': 'Person31'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person32}} < {}'.format(np.mean(df_sim_matrixx['Person32'])),
-                                                                        'column_id': 'Person32'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person33}} < {}'.format(np.mean(df_sim_matrixx['Person33'])),
-                                                                        'column_id': 'Person33'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person34}} < {}'.format(np.mean(df_sim_matrixx['Person34'])),
-                                                                        'column_id': 'Person34'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person35}} < {}'.format(np.mean(df_sim_matrixx['Person35'])),
-                                                                        'column_id': 'Person35'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person36}} < {}'.format(np.mean(df_sim_matrixx['Person36'])),
-                                                                        'column_id': 'Person36'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person37}} < {}'.format(np.mean(df_sim_matrixx['Person37'])),
-                                                                        'column_id': 'Person37'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person38}} < {}'.format(np.mean(df_sim_matrixx['Person38'])),
-                                                                        'column_id': 'Person38'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person39}} < {}'.format(np.mean(df_sim_matrixx['Person39'])),
-                                                                        'column_id': 'Person39'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, {
-                                                                    'if': {
-                                                                        'filter_query': '{{Person40}} < {}'.format(np.mean(df_sim_matrixx['Person40'])),
-                                                                        'column_id': 'Person40'
-                                                                    },
-                                                                    'backgroundColor': '#FF4136',
-                                                                    'color': 'white'
-                                                                }, ],
-                                            style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
-                                            fixed_rows={'headers': True},
-                                            style_cell = {'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'}
+dash_sim_matrix = dash_table.DataTable(df_sim_matrixx.to_dict('records'),
+                                       [{"name": i, "id": i} for i in df_sim_matrixx.columns],
+                                       fixed_columns={'headers': True, 'data': 1},
+
+                                       style_data_conditional=[
+                                           {
+                                               'if': {
+                                                   'filter_query': '{{Person1}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person1'])),
+                                                   'column_id': 'Person1'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person2}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person2'])),
+                                                   'column_id': 'Person2'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person3}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person3'])),
+                                                   'column_id': 'Person3'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person4}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person4'])),
+                                                   'column_id': 'Person4'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person5}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person5'])),
+                                                   'column_id': 'Person5'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person6}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person6'])),
+                                                   'column_id': 'Person6'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person7}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person7'])),
+                                                   'column_id': 'Person7'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person8}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person8'])),
+                                                   'column_id': 'Person8'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person9}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person9'])),
+                                                   'column_id': 'Person9'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person10}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person10'])),
+                                                   'column_id': 'Person10'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person11}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person11'])),
+                                                   'column_id': 'Person11'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person12}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person12'])),
+                                                   'column_id': 'Person12'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person13}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person13'])),
+                                                   'column_id': 'Person13'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person14}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person14'])),
+                                                   'column_id': 'Person14'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person15}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person15'])),
+                                                   'column_id': 'Person15'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person16}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person16'])),
+                                                   'column_id': 'Person16'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person17}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person17'])),
+                                                   'column_id': 'Person17'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person18}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person18'])),
+                                                   'column_id': 'Person18'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person19}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person19'])),
+                                                   'column_id': 'Person19'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person20}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person20'])),
+                                                   'column_id': 'Person20'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person21}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person21'])),
+                                                   'column_id': 'Person21'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person22}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person22'])),
+                                                   'column_id': 'Person22'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person23}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person23'])),
+                                                   'column_id': 'Person23'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person24}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person24'])),
+                                                   'column_id': 'Person24'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person25}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person25'])),
+                                                   'column_id': 'Person25'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person26}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person26'])),
+                                                   'column_id': 'Person26'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person27}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person27'])),
+                                                   'column_id': 'Person27'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person28}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person28'])),
+                                                   'column_id': 'Person28'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person29}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person29'])),
+                                                   'column_id': 'Person29'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person30}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person30'])),
+                                                   'column_id': 'Person30'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person31}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person31'])),
+                                                   'column_id': 'Person31'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person32}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person32'])),
+                                                   'column_id': 'Person32'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person33}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person33'])),
+                                                   'column_id': 'Person33'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person34}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person34'])),
+                                                   'column_id': 'Person34'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person35}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person35'])),
+                                                   'column_id': 'Person35'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person36}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person36'])),
+                                                   'column_id': 'Person36'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person37}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person37'])),
+                                                   'column_id': 'Person37'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person38}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person38'])),
+                                                   'column_id': 'Person38'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person39}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person39'])),
+                                                   'column_id': 'Person39'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, {
+                                               'if': {
+                                                   'filter_query': '{{Person40}} < {}'.format(
+                                                       np.mean(df_sim_matrixx['Person40'])),
+                                                   'column_id': 'Person40'
+                                               },
+                                               'backgroundColor': '#FF4136',
+                                               'color': 'white'
+                                           }, ],
+                                       style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
+                                       fixed_rows={'headers': True},
+                                       style_cell={'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'}
                                        )
 
 alert3 = dbc.Container(dcc.Graph(id='visualisation_block'))
@@ -692,26 +726,23 @@ page_1_layout = html.Div([
     html.Br(),
     dbc.Container([dbc.Row([
         dropdown_network]),
-        dbc.Row([html.Label("Distance Matrix, red means that the distance is les than the average distance with all other persons for that column"),
-                            dash_sim_matrix]),
+        dbc.Row([html.Label(
+            "Distance Matrix, red means that the distance is les than the average distance with all other persons for that column"),
+            dash_sim_matrix]),
         dbc.Row([alert3])
-        
-        
-        
-        ])
-    
-                    
+
+    ])
+
 ]
 )
-        
+
 """################################## Page 2: Person comparison ############################
 """
 count_list = []
 for i in all_data_frames.keys():
     count_list.append(len(all_data_frames[i]['Picture']))
 
-    
-df_couts = pd.DataFrame(count_list,  columns = ['Number of Tweets'])
+df_couts = pd.DataFrame(count_list, columns=['Number of Tweets'])
 fig_counts = px.histogram(df_couts, x='Number of Tweets')
 
 dropdown1 = html.Div([
@@ -729,32 +760,31 @@ table2 = html.Div(id='table2-container')
 alert2 = dbc.Container(id='tbl_out2')
 alert5 = dbc.Container(dcc.Graph(figure=fig_counts))
 
-
 page_2_layout = html.Div([
     html.Div(id='page-2-content'),
     Content_header2,
     html.Br(),
     sidebar,
     dbc.Container([
-        
+
         dbc.Row([
-            
+
             alert5
-            ]),
+        ]),
         dbc.Row([
-        # Boxplot
-        dbc.Col([dropdown1,
-                 table1,
-                 alert1
+            # Boxplot
+            dbc.Col([dropdown1,
+                     table1,
+                     alert1
 
-                 ]),
+                     ]),
 
-        dbc.Col([dropdown2,
-                 table2,
-                 alert2
+            dbc.Col([dropdown2,
+                     table2,
+                     alert2
 
-                 ]),
-    ]),
+                     ]),
+        ]),
 
     ]
 
@@ -764,12 +794,66 @@ page_2_layout = html.Div([
 
 """################################## Page 3: Textual Analysis ############################
 """
+# Sample data
+
+df = st.runnable('train.csv')
+
+
+# Create boxplot
+fig_box = px.box(df['sentiment'], x="sentiment", points="all")
+
+# Create bar chart
+fig_bar = px.bar(df['tone'], x='tone', color='tone')
+
+# Create table
+threatening_words = ['attack', 'bomb', 'gun', 'kill', 'murder', 'terror', 'hate', 'scarely', 'seldom', 'barely',
+                     'never', 'nobody', 'nothing', 'nowhere']
+
+df_table = pd.DataFrame({
+    'Text': ['This is a safe message', 'This message contains dangerous words', 'This message is threatening',
+             'This message is violent'],
+})
+df_table['Color'] = df_table['Text'].apply(lambda x: 'red' if any(word in x for word in threatening_words) else 'black')
+table_columns = [{'name': i, 'id': i} for i in df_table.columns]
+table_data = df_table.to_dict('records')
+
+table = dash_table.DataTable(
+    columns=table_columns,
+    data=table_data,
+    style_cell={'textAlign': 'left', 'whiteSpace': 'normal', 'height': 'auto'},
+    style_data_conditional=[
+        {
+            'if': {'column_id': 'Text', 'filter_query': '{Color} = "red"'},
+            'color': 'red',
+            'fontWeight': 'bold'
+        }
+    ]
+)
+
+# Create layout
+Content_header3 = html.H1('Page 3 - Boxplot, Bar Chart, and Table')
+sidebar = html.Div('sidebar')
+
 page_3_layout = html.Div([
     html.Div(id='page-3-content'),
     Content_header3,
-    html.Br(),
+    html.Div([
+        dcc.Graph(
+            id='example-boxplot',
+            figure=fig_box,
+            className='six columns'
+        ),
+        dcc.Graph(
+            id='example-bar',
+            figure=fig_bar,
+            className='six columns'
+        ),
+    ], className='row'),
+    html.Div([
+        html.H2('Table'),
+        table
+    ]),
     sidebar
-
 ])
 
 """################################## Page 4: Picture Analysis ############################
@@ -779,8 +863,7 @@ count_list = []
 for i in all_data_frames.keys():
     count_list.append(len(all_data_frames[i]['Picture']))
 
-    
-df_couts = pd.DataFrame(count_list,  columns = ['Number of Tweets'])
+df_couts = pd.DataFrame(count_list, columns=['Number of Tweets'])
 fig_counts = px.histogram(df_couts, x='Number of Tweets')
 
 dropdown41 = html.Div([
@@ -803,7 +886,7 @@ page_4_layout = html.Div([
                  ]),
 
         dbc.Col([alert3333,
-            alert41
+                 alert41
 
                  ]),
     ]),
@@ -814,9 +897,10 @@ page_4_layout = html.Div([
 
 ])
 
-
 """################################## Callbacks Home-page: Navigation ############################
 """
+
+
 @app.callback(dash.dependencies.Output("page-content", "children"), [dash.dependencies.Input("url", "pathname")])
 def render_page_content(pathname):
     if pathname == "/page-1":
@@ -843,6 +927,7 @@ def render_page_content(pathname):
 """################################## Callbacks page11: Table and network visualization ############################
 """
 
+
 @app.callback(
     Output("visualisation_block", "figure"),
     Input("Confirm_net", "n_clicks"),
@@ -853,17 +938,16 @@ def update_vis(n_clicks, value):
         allowed = []
         for i in value:
             allowed.append(int(i[6:]))
-            
+
         # allowed = [1,2,3,8,10, 40, 41, 33]
         for i in range(len(sim_matrixx)):
-            if i+1 in allowed:
-                
-                user1 = f'Person{i+1}'
+            if i + 1 in allowed:
+
+                user1 = f'Person{i + 1}'
                 for j in range(len(sim_matrixx[i])):
-                    if j +1 in allowed:
-                        
-                        user2 = f'Person{j+1}'
-                        edge_list.append((user1, user2,sim_matrixx[i][j]))
+                    if j + 1 in allowed:
+                        user2 = f'Person{j + 1}'
+                        edge_list.append((user1, user2, sim_matrixx[i][j]))
 
         fig = plot_network_graph(edge_list)
         return fig
@@ -875,6 +959,8 @@ def update_vis(n_clicks, value):
 """
 
 "################################### User y ###################################"
+
+
 @callback(Output('tbl_out1', 'children'),
           [Input('table1', 'active_cell'), Input('table1', 'data')])
 def update_graphs(value, data):
@@ -902,11 +988,11 @@ def update_graphs(value, data):
 def update_output(value):
     if value:
         df = all_data_frames[value]
-        q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table1', 
-                                 
-                                     style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
-                                     fixed_rows={'headers': True},
-                                     style_cell = {'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'}
+        q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table1',
+
+                                 style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
+                                 fixed_rows={'headers': True},
+                                 style_cell={'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'}
                                  )
         return f'You have selected {value}', q
     else:
@@ -916,6 +1002,8 @@ def update_output(value):
 
 
 "################################### User x ###################################"
+
+
 @callback(Output('tbl_out2', 'children'),
           [Input('table2', 'active_cell'), Input('table2', 'data')])
 def update_graphs2(value, data):
@@ -943,10 +1031,10 @@ def update_graphs2(value, data):
 def update_output2(value):
     if value:
         df = all_data_frames[value]
-        q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table2',                                  
-                                     style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
-                                     fixed_rows={'headers': True},
-                                     style_cell = {'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'})
+        q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table2',
+                                 style_table={'minWidth': '100%', 'height': 400, 'overflowY': 'auto'},
+                                 fixed_rows={'headers': True},
+                                 style_cell={'minWidth': '90px', 'width': '90px', 'maxWidth': '90px'})
         return f'You have selected {value}', q
     else:
         raise PreventUpdate
@@ -956,8 +1044,9 @@ def update_output2(value):
 
 """################################### Callbacks page 3: ##################################"""
 
-
 """################################### Callbacks page 4: Showing classification next to picture#################"""
+
+
 @callback(Output('tbl_out41', 'children'),
           [Input('table41', 'active_cell'), Input('table41', 'data')])
 def update_graphs4(value, data):
@@ -965,7 +1054,6 @@ def update_graphs4(value, data):
         row = value['row']
         col_id = value['column_id']
         iets = str(data[row][col_id])
-
 
         top_5_predictions = predictions_df[predictions_df['image_file'] == iets].sort_values(by='rank')
         top_5_list = [
@@ -995,7 +1083,7 @@ def update_graphs4(value, data):
     else:
         raise PreventUpdate
 
-    return  "Click the table"
+    return "Click the table"
 
 
 @app.callback(
@@ -1012,13 +1100,13 @@ def update_output4(value):
 
     return f'You have selected {value}', q
 
+
 @callback(Output('hist_thingy', 'children'),
           [Input('demo-dropdown41', 'value')])
-
 def update_output8(value):
     if value:
-        classifications_df_pers =predictions_df[predictions_df['person_id'] == int(value[6:])]
-        
+        classifications_df_pers = predictions_df[predictions_df['person_id'] == int(value[6:])]
+
         fig_counts_hist_pers = px.histogram(classifications_df_pers, x='class_label')
         return dcc.Graph(figure=fig_counts_hist_pers)
     else:
@@ -1026,9 +1114,8 @@ def update_output8(value):
 
     return f'You have selected {value}'
 
+
 """Running dashboard"""
 
 if __name__ == '__main__':
     app.run_server(debug=True, )
-
-    
