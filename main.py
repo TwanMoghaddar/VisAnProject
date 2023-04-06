@@ -798,14 +798,13 @@ page_2_layout = html.Div([
 
 df = st.runnable('train.csv')
 
-
-# Create boxplot
+# Create boxplot to find outliers iin this grand scheme of sentiments per tweet
 fig_box = px.box(df['sentiment'], x="sentiment", points="all")
 
-# Create bar chart
+# Create bar chart for the counts per tweet in a certain tone
 fig_bar = px.bar(df['tone'], x='tone', color='tone')
 
-# Create table
+# Create table for threathening words. This table can also be found in sentiment.py
 threatening_words = ['attack', 'bomb', 'gun', 'kill', 'murder', 'terror', 'hate', 'scarely', 'seldom', 'barely',
                      'never', 'nobody', 'nothing', 'nowhere']
 
