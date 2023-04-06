@@ -201,14 +201,14 @@ dropdown1 = html.Div([
     dcc.Dropdown(options=sorted(list(all_data_frames.keys())), id='demo-dropdown1'),
     html.Div(id='dd-output-container1')
 ])
-table1 = html.Div(id='table1')
+table1 = html.Div(id='table1-container')
 alert1 = dbc.Container(id='tbl_out1')
 
 dropdown2 = html.Div([
     dcc.Dropdown(options=sorted(list(all_data_frames.keys())), id='demo-dropdown2'),
     html.Div(id='dd-output-container2')
 ])
-table2 = html.Div(id='table2')
+table2 = html.Div(id='table2-container')
 alert2 = dbc.Container(id='tbl_out2')
 
 page_2_layout = html.Div([
@@ -251,7 +251,7 @@ dropdown41 = html.Div([
     dcc.Dropdown(options=sorted(list(all_data_frames.keys())), id='demo-dropdown41'),
     html.Div(id='dd-output-container41')
 ])
-table41 = html.Div(id='table41')
+table41 = html.Div(id='table41-container')
 alert41 = dbc.Container(id='tbl_out41')
 
 page_4_layout = html.Div([
@@ -329,13 +329,14 @@ def update_graphs(value, data):
 
 
 @app.callback(
-    Output('dd-output-container1', 'children'), Output('table1', 'children'),
+    Output('dd-output-container1', 'children'), Output('table1-container', 'children'),
     Input('demo-dropdown1', 'value')
 )
 def update_output(value):
     if value:
         df = all_data_frames[value]
         q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table1')
+        return f'You have selected {value}', q
     else:
         raise PreventUpdate
 
@@ -364,13 +365,14 @@ def update_graphs2(value, data):
 
 
 @app.callback(
-    Output('dd-output-container2', 'children'), Output('table2', 'children'),
+    Output('dd-output-container2', 'children'), Output('table2-container', 'children'),
     Input('demo-dropdown2', 'value')
 )
 def update_output2(value):
     if value:
         df = all_data_frames[value]
         q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table2')
+        return f'You have selected {value}', q
     else:
         raise PreventUpdate
 
@@ -394,7 +396,7 @@ def update_graphs4(value, data):
     if value and data:
         row = value['row']
         col_id = value['column_id']
-        iets = data[row][col_id]
+        iets = str(data[row][col_id])
 
 
         top_5_predictions = predictions_df[predictions_df['image_file'] == iets].sort_values(by='rank')
@@ -429,13 +431,14 @@ def update_graphs4(value, data):
 
 
 @app.callback(
-    Output('dd-output-container41', 'children'), Output('table41', 'children'),
+    Output('dd-output-container41', 'children'), Output('table41-container', 'children'),
     Input('demo-dropdown41', 'value')
 )
 def update_output4(value):
     if value:
         df = all_data_frames[value]
         q = dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='table41')
+        return f'You have selected {value}', q
     else:
         raise PreventUpdate
 
