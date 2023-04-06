@@ -692,7 +692,7 @@ page_1_layout = html.Div([
     html.Br(),
     dbc.Container([dbc.Row([
         dropdown_network]),
-        dbc.Row([html.Label("This is my Table Title"),
+        dbc.Row([html.Label("Distance Matrix, red means that the distance is les than the average distance with all other persons for that column"),
                             dash_sim_matrix]),
         dbc.Row([alert3])
         
